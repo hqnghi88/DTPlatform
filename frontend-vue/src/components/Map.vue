@@ -747,12 +747,12 @@ export default {
         map = new mapboxgl.Map({
             container: this.$refs.mapContainer,
             style: "mapbox://styles/mapbox/streets-v12",
-            center: [105.804817, 21.028511],
-            zoom: 12,
+            center: [105.849817, 21.028511],
+            zoom: 16,
         });
 
         // add bus data
-        let resp = await this.fetchJSON('https://dtplatform.netlify.app/export.geojson')
+        let resp = await this.fetchJSON('/export.geojson')
         this.dataBus = resp.features
 
         for (let i = 0; i < this.dataBus.length; i++) {
