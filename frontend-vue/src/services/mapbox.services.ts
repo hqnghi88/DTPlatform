@@ -4,7 +4,7 @@ import axios from 'axios';
 
 class AuthService {
     api: any
-    constructor(baseUrl = "https://dtplatform.onrender.com/road") {
+    constructor(baseUrl = import.meta.env.BACKEND_URL0+"/road") {
         this.api = createApiClient(baseUrl);
     }
     async getRoad(token: string) {

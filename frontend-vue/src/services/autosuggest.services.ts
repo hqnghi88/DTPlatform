@@ -4,7 +4,7 @@ import axios from 'axios';
 
 class AutoSuggestService {
     api: any
-    constructor(baseUrl = "https://dtplatform.onrender.com/api") {
+    constructor(baseUrl = import.meta.env.BACKEND_URL0+"/api") {
         this.api = createApiClient(baseUrl);
     }
     async getAutoSuggest(q:string, token: string) {

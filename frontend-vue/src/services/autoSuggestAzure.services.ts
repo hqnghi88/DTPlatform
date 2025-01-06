@@ -4,7 +4,7 @@ import axios from 'axios';
 
 class AutoSuggestAzureService {
     api: any
-    constructor(baseUrl = "https://dtplatform.onrender.com/api") {
+    constructor(baseUrl = import.meta.env.BACKEND_URL0+"/api") {
         this.api = createApiClient(baseUrl);
     }
     async getSuggestion(q:string, token: string) {

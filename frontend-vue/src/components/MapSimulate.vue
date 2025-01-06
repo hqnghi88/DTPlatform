@@ -142,11 +142,23 @@
 
 
     <div id="mapContainer"></div>
+
+    <button class="geolocate-btn" style="width: 50px; height: auto;"
+        @click="loadingWait = !loadingWait; getCurrentLocation()">
+        <div v-if="loadingWait == true">
+            <i class="fa-solid fa-spinner fa-spin-pulse" style="width: 25px; height: 25px;"></i>
+        </div>
+        <div v-else>
+            <i class="fa-solid fa-location-crosshairs" style="width: 25px; height: 25px;"></i>
+        </div>
+    </button>
 </template>
 
 <script setup>
 import AutoSuggestAzureServices from '@/services/autoSuggestAzure.services';
 import PollutionService from '../services/pollution.services'
+import locationService from '@/services/location.service';
+
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router'
 import debounce from 'lodash/debounce';
@@ -163,6 +175,7 @@ const suggestionsStart = ref([]);
 const suggestionsEnd = ref([]);
 const displaySuggestStart = ref(false), displaySuggestEnd = ref(false)
 
+const trafficToken = import.meta.env.VITE_TRAFFIC_API_KEY   
 const routeColors = ['blue', '#800080', '#FF1493', '#00FFFF', '#FF00FF', '#40E0D0'];
 var routeURL, map
 const datasourceRoute = ref(null)
@@ -246,8 +259,8 @@ async function fetchJSON(url) {
 onMounted(async () => {
 
     map = new atlas.Map('mapContainer', {
-        center: [105.804817, 21.028511],
-        zoom: 12,
+        center: [105.849817, 21.028511],
+        zoom: 16,
         // style: 'grayscale_dark',
         view: 'Auto',
 
@@ -257,7 +270,6 @@ onMounted(async () => {
         }
     });
 
-    // add bus data
     // add bus data
     let resp = await fetchJSON('/export.geojson')//https://dtplatform.netlify.app
     dataBus.value = resp.features
@@ -671,7 +683,57 @@ function toggle() {  // toggle side bar
 function pushToDashBoard() {
     router.push('home')
 }
+function getCurrentLocation() {
+            if (navigator.geolocation) {
+                var latCurrent, lngCurrent
 
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    lngCurrent = position.coords.longitude;
+                    latCurrent = position.coords.latitude;
+
+                    const coordinates = [lngCurrent, latCurrent];
+
+                    let resp = await locationService.getLocationByPoint(latCurrent, lngCurrent, trafficToken)
+                    if (resp.resourceSets.length > 0 && resp.resourceSets[0].resources.length > 0) {
+                        var address = resp.resourceSets[0].resources[0].address.addressLine;
+
+                        this.addressStart = address + ' Việt Nam'
+                    }
+                    console.log(map);
+                    // map.flyTo({
+                    //     center: coordinates,
+                    //     zoom: 14
+                    // });
+                    map.setCamera({ bounds:atlas.data.BoundingBox.fromData( [coordinates,coordinates]), padding: 50 });
+                
+
+                    // this.start[0] = lngCurrent
+                    // this.start[1] = latCurrent
+
+                    // let marker = new mapboxgl.Marker({ color: 'green', draggable: true })
+                    //     .setLngLat([lngCurrent, latCurrent])
+                    //     .addTo(map);
+                    // marker.on('dragend', () => {
+                    //     let lngLat = marker.getLngLat();
+                    //     this.start[0] = lngLat.lng
+                    //     this.start[1] = lngLat.lat
+                    //     this.calculateRoute()
+                    // });
+                    // this.markers[0] = marker
+
+                    // // calculate route
+                    // this.calculateRoute()
+
+                    this.loadingWait = false
+                }, error => {
+                    console.error('Error getting location', error);
+                });
+
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+
+        }
 // 
 // routing
 // 

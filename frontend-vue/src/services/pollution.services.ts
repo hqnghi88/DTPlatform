@@ -4,7 +4,7 @@ import axios from 'axios';
 
 class PollutionService {
     api: any
-    constructor(baseUrl = "https://dtplatform.onrender.com/api") {
+    constructor(baseUrl = import.meta.env.BACKEND_URL0+"/api") {
         this.api = createApiClient(baseUrl);
     }
     async getPollution(token: string, city: string) {
