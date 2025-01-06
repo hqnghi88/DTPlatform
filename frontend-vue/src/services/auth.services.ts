@@ -15,7 +15,7 @@ class AuthService {
         } catch (err: any) {
             if (err.response.status == '401') throw new Error("Sai email hoặc mật khẩu, vui lòng nhập lại");
             else if (err.response.status == '400') throw new Error("Các trường nhập vào không hợp lệ hoặc không đủ ký tự, vui lòng nhập lại");
-            throw new Error("Lỗi hệ thống")
+            throw new Error("Lỗi hệ thống"+import.meta.env.BACKEND_URL0)
         }
     }
 
