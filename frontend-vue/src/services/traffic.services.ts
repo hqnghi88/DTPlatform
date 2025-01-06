@@ -4,7 +4,7 @@ import axios from 'axios';
 
 class TrafficService {
     api: any
-    constructor(baseUrl = import.meta.env.BACKEND_URL0+"/api") {
+    constructor(baseUrl = import.meta.env.VITE_BACKEND_URL0+"/api") {
         this.api = createApiClient(baseUrl);
     }
     async getTraffic(token: string) {

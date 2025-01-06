@@ -4,7 +4,7 @@ import axios from 'axios';
 
 class UserService {
     api: any
-    constructor(baseUrl = import.meta.env.BACKEND_URL0+"/api") {
+    constructor(baseUrl = import.meta.env.VITE_BACKEND_URL0+"/api") {
         this.api = createApiClient(baseUrl);
     }
     async getUsers(token: string) {

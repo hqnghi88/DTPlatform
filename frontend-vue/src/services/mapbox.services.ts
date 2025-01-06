@@ -4,7 +4,7 @@ import axios from 'axios';
 
 class AuthService {
     api: any
-    constructor(baseUrl = import.meta.env.BACKEND_URL0+"/road") {
+    constructor(baseUrl = import.meta.env.VITE_BACKEND_URL0+"/road") {
         this.api = createApiClient(baseUrl);
     }
     async getRoad(token: string) {

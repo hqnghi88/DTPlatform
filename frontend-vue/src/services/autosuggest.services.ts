@@ -4,7 +4,7 @@ import axios from 'axios';
 
 class AutoSuggestService {
     api: any
-    constructor(baseUrl = import.meta.env.BACKEND_URL0+"/api") {
+    constructor(baseUrl = import.meta.env.VITE_BACKEND_URL0+"/api") {
         this.api = createApiClient(baseUrl);
     }
     async getAutoSuggest(q:string, token: string) {
