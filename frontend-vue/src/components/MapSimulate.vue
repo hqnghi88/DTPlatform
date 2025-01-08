@@ -100,13 +100,13 @@
 
                             <div class="d-flex justify-content-between">
                                 <span class="fw-bold">
-                                    Lưu lượng xe:
+                                    Mô phỏng xe:
                                 </span>
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" @click="toggleTrafficLayer" type="checkbox"
                                         role="switch" id="flexSwitchCheckDefault">
                                 </div>
-                            </div> 
+                            </div>
                         </div>
                         <hr>
                         <div class="fw-bold">
@@ -188,7 +188,7 @@ const suggestionsStart = ref([]);
 const suggestionsEnd = ref([]);
 const displaySuggestStart = ref(false), displaySuggestEnd = ref(false)
 
-const trafficToken = import.meta.env.VITE_TRAFFIC_API_KEY   
+const trafficToken = import.meta.env.VITE_TRAFFIC_API_KEY
 const routeColors = ['blue', '#800080', '#FF1493', '#00FFFF', '#FF00FF', '#40E0D0'];
 var routeURL, map
 const datasourceRoute = ref(null)
@@ -330,6 +330,7 @@ onMounted(async () => {
             maxZoom: 22
         });
         map.sources.add(datasource);
+        // console.log( datasource);
 
         // for routing
         datasourceRoute.value = new atlas.source.DataSource();
@@ -397,9 +398,9 @@ onMounted(async () => {
                 filter: ['==', ['get', 'traffic_road_coverage'], 'full']
             }, trafficBackgroundOptions))
         ], 'labels');
-        // loadAniTraffic();
-         //Common style options for traffic flow dashed lines.
-         var trafficFLowLineOptions = {
+
+        //Common style options for traffic flow dashed lines.
+        var trafficFLowLineOptions = {
             sourceLayer: 'Traffic flow',
             strokeColor: 'black',
 
@@ -449,33 +450,47 @@ onMounted(async () => {
         var fastFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
             filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'full'], ['>', ['get', 'traffic_level'], 0.8]]
         }, trafficFLowLineOptions));
-        layerTraffic.value=[oneSideSlowFlowLayer, slowFlowLayer, oneSideMidFlowLayer, midFlowLayer, oneSideFastFlowLayer, fastFlowLayer];
-        //Add the layers below the labels to make the map clearer.
-        map.layers.add(layerTraffic.value, 'labels');
+        layerTraffic.value = [oneSideSlowFlowLayer, slowFlowLayer, oneSideMidFlowLayer, midFlowLayer, oneSideFastFlowLayer, fastFlowLayer];
 
-        //Create a moving dashed line animation for each of the flow layers, but with different speedMultipliers.
-        //Reverse the animation direction as it appears to ensure the correct flow directions for different side of the road for most countries (drive on the right side).
-        var animationOptions = {
-            gapLength: 2,
-            dashLength: 2,
-            duration: 2000,
-            autoPlay: true,
-            loop: true,
-            reverse: true
-        };
-
-        if (atlas.animations) {
-            atlas.animations.flowingDashedLine(oneSideSlowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
-            atlas.animations.flowingDashedLine(slowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
-            atlas.animations.flowingDashedLine(oneSideMidFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
-            atlas.animations.flowingDashedLine(midFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
-            atlas.animations.flowingDashedLine(oneSideFastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
-            atlas.animations.flowingDashedLine(fastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
-        } else {
-            console.error('Atlas animations are not loaded.');
-        }
+        // loadAniTraffic(); 
     });
 })
+
+function loadAniTraffic() {
+    // var datasource=map.sources[4];
+    // console.log( map.sources);
+    // layerTraffic.value=[oneSideSlowFlowLayer];
+    //Add the layers below the labels to make the map clearer.
+    map.layers.add(layerTraffic.value, 'labels');
+
+    //Create a moving dashed line animation for each of the flow layers, but with different speedMultipliers.
+    //Reverse the animation direction as it appears to ensure the correct flow directions for different side of the road for most countries (drive on the right side).
+    var animationOptions = {
+        gapLength: 2,
+        dashLength: 2,
+        duration: 2000,
+        autoPlay: true,
+        loop: true,
+        reverse: true
+    };
+
+    if (atlas.animations) {
+        var i = 0;
+        var spd = [0.25, 0.25, 1, 1, 4, 4];
+        for (const layer of layerTraffic.value) {
+            atlas.animations.flowingDashedLine(layer, Object.assign({ speedMultiplier: spd[i] }, animationOptions));
+            i++;
+        }
+        // atlas.animations.flowingDashedLine(oneSideSlowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
+        // atlas.animations.flowingDashedLine(slowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
+        // atlas.animations.flowingDashedLine(oneSideMidFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
+        // atlas.animations.flowingDashedLine(midFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
+        // atlas.animations.flowingDashedLine(oneSideFastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
+        // atlas.animations.flowingDashedLine(fastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
+    } else {
+        console.error('Atlas animations are not loaded.');
+    }
+}
 
 async function loadPollutionData() {
     const stations = [
@@ -567,85 +582,6 @@ async function loadPollutionData() {
             });
         }
     }
-}
-function loadAniTraffic(){
-        var datasource=map.sources[0];
-        //Common style options for traffic flow dashed lines.
-        var trafficFLowLineOptions = {
-            sourceLayer: 'Traffic flow',
-            strokeColor: 'black',
-
-            //Scale the width of roads based on the level of traffic.
-            strokeWidth: [
-                'interpolate',
-                ['exponential', 2],
-                ['zoom'],
-                12, 1,
-                17, 4
-            ]
-        };
-
-        //Create an offset for the layers that has two directional traffic data.
-        var offsetExp = [
-            'interpolate',
-            ['exponential', 2],
-            ['zoom'],
-            12, 3,
-            17, 7
-        ];
-
-        //Create line layers for the different levels of traffic flow.
-        var oneSideSlowFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
-            offset: offsetExp,
-            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'one_side'], ['>', ['get', 'traffic_level'], 0], ['<=', ['get', 'traffic_level'], 0.01]]
-        }, trafficFLowLineOptions));
-
-        var slowFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
-            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'full'], ['>', ['get', 'traffic_level'], 0], ['<=', ['get', 'traffic_level'], 0.01]]
-        }, trafficFLowLineOptions));
-
-        var oneSideMidFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
-            offset: offsetExp,
-            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'one_side'], ['>', ['get', 'traffic_level'], 0.01], ['<=', ['get', 'traffic_level'], 0.8]]
-        }, trafficFLowLineOptions));
-
-        var midFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
-            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'full'], ['>', ['get', 'traffic_level'], 0.01], ['<=', ['get', 'traffic_level'], 0.8]]
-        }, trafficFLowLineOptions));
-
-        var oneSideFastFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
-            offset: offsetExp,
-            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'one_side'], ['>', ['get', 'traffic_level'], 0.8]]
-        }, trafficFLowLineOptions));
-
-        var fastFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
-            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'full'], ['>', ['get', 'traffic_level'], 0.8]]
-        }, trafficFLowLineOptions));
-        layerTraffic.value=[oneSideSlowFlowLayer, slowFlowLayer, oneSideMidFlowLayer, midFlowLayer, oneSideFastFlowLayer, fastFlowLayer];
-        //Add the layers below the labels to make the map clearer.
-        map.layers.add(layerTraffic.value, 'labels');
-
-        //Create a moving dashed line animation for each of the flow layers, but with different speedMultipliers.
-        //Reverse the animation direction as it appears to ensure the correct flow directions for different side of the road for most countries (drive on the right side).
-        var animationOptions = {
-            gapLength: 2,
-            dashLength: 2,
-            duration: 2000,
-            autoPlay: true,
-            loop: true,
-            reverse: true
-        };
-
-        if (atlas.animations) {
-            atlas.animations.flowingDashedLine(oneSideSlowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
-            atlas.animations.flowingDashedLine(slowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
-            atlas.animations.flowingDashedLine(oneSideMidFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
-            atlas.animations.flowingDashedLine(midFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
-            atlas.animations.flowingDashedLine(oneSideFastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
-            atlas.animations.flowingDashedLine(fastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
-        } else {
-            console.error('Atlas animations are not loaded.');
-        }
 }
 function loadWeatherLayer(tilesetId) {
     //If there is already a layer, stop it animating.
@@ -749,7 +685,7 @@ function toggleTrafficLayer() {
 
     if (switchBtnTraffic.value) {
         // loadWeatherLayer('microsoft.weather.infrared.main');
-        // loadAniTraffic();
+        loadAniTraffic();
     } else {
         if (layerTraffic.value) {
             map.layers.remove(layerTraffic.value);
@@ -797,56 +733,56 @@ function pushToDashBoard() {
     router.push('home')
 }
 function getCurrentLocation() {
-            if (navigator.geolocation) {
-                var latCurrent, lngCurrent
+    if (navigator.geolocation) {
+        var latCurrent, lngCurrent
 
-                navigator.geolocation.getCurrentPosition(async (position) => {
-                    lngCurrent = position.coords.longitude;
-                    latCurrent = position.coords.latitude;
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            lngCurrent = position.coords.longitude;
+            latCurrent = position.coords.latitude;
 
-                    const coordinates = [lngCurrent, latCurrent];
+            const coordinates = [lngCurrent, latCurrent];
 
-                    let resp = await locationService.getLocationByPoint(latCurrent, lngCurrent, trafficToken)
-                    if (resp.resourceSets.length > 0 && resp.resourceSets[0].resources.length > 0) {
-                        var address = resp.resourceSets[0].resources[0].address.addressLine;
+            let resp = await locationService.getLocationByPoint(latCurrent, lngCurrent, trafficToken)
+            if (resp.resourceSets.length > 0 && resp.resourceSets[0].resources.length > 0) {
+                var address = resp.resourceSets[0].resources[0].address.addressLine;
 
-                        this.addressStart = address + ' Việt Nam'
-                    }
-                    console.log(map);
-                    // map.flyTo({
-                    //     center: coordinates,
-                    //     zoom: 14
-                    // });
-                    map.setCamera({ bounds:atlas.data.BoundingBox.fromData( [coordinates,coordinates]), padding: 50 });
-                
-
-                    // this.start[0] = lngCurrent
-                    // this.start[1] = latCurrent
-
-                    // let marker = new mapboxgl.Marker({ color: 'green', draggable: true })
-                    //     .setLngLat([lngCurrent, latCurrent])
-                    //     .addTo(map);
-                    // marker.on('dragend', () => {
-                    //     let lngLat = marker.getLngLat();
-                    //     this.start[0] = lngLat.lng
-                    //     this.start[1] = lngLat.lat
-                    //     this.calculateRoute()
-                    // });
-                    // this.markers[0] = marker
-
-                    // // calculate route
-                    // this.calculateRoute()
-
-                    this.loadingWait = false
-                }, error => {
-                    console.error('Error getting location', error);
-                });
-
-            } else {
-                alert('Geolocation is not supported by this browser.');
+                this.addressStart = address + ' Việt Nam'
             }
+            console.log(map);
+            // map.flyTo({
+            //     center: coordinates,
+            //     zoom: 14
+            // });
+            map.setCamera({ bounds: atlas.data.BoundingBox.fromData([coordinates, coordinates]), padding: 50 });
 
-        }
+
+            // this.start[0] = lngCurrent
+            // this.start[1] = latCurrent
+
+            // let marker = new mapboxgl.Marker({ color: 'green', draggable: true })
+            //     .setLngLat([lngCurrent, latCurrent])
+            //     .addTo(map);
+            // marker.on('dragend', () => {
+            //     let lngLat = marker.getLngLat();
+            //     this.start[0] = lngLat.lng
+            //     this.start[1] = lngLat.lat
+            //     this.calculateRoute()
+            // });
+            // this.markers[0] = marker
+
+            // // calculate route
+            // this.calculateRoute()
+
+            this.loadingWait = false
+        }, error => {
+            console.error('Error getting location', error);
+        });
+
+    } else {
+        alert('Geolocation is not supported by this browser.');
+    }
+
+}
 // 
 // routing
 // 
@@ -933,16 +869,16 @@ async function calculateRoute() {
 
                 //Format time as min:sec. If seconds less than 10, prepend a 0 to the second value.
                 Math.round(directions.routes[i].summary.travelTimeInSeconds / 60), ':',
-                ((s < 10) ? '0' : ''), s, ' min</td>','<td>',s*10,'</td>','</tr>',
+                ((s < 10) ? '0' : ''), s, ' min</td>', '<td>', s * 10, '</td>', '</tr>',
                 '<tr><td></td>',
                 '<td>CO2</td><td>Noise exposure</td><td>Particle exposure</td></tr>',
                 '<tr><td></td>',
-                '<td>',s*10,'</td><td>',s/10,'dB</td><td>',s*0.5,'</td></tr>', 
+                '<td>', s * 10, '</td><td>', s / 10, 'dB</td><td>', s * 0.5, '</td></tr>',
             );
-                //CO2 CH4 N20 emission
-                //Noise exposure
-                //Particle size
-                //Calory lost
+            //CO2 CH4 N20 emission
+            //Noise exposure
+            //Particle size
+            //Calory lost
         }
 
         map.events.add('click', lineLayer.value, function (e) {

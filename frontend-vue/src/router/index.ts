@@ -5,7 +5,7 @@ import SignUp from './../views/SignUp.vue'
 import AdminCSV from './../views/AdminCSV.vue'
 // @ts-ignore
 import MainPage from './../views/MainPage.vue'
-import Simulation from '@/views/Simulation.vue'
+import Simulation from './../views/Simulation.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
