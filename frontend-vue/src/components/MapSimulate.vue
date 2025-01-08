@@ -95,7 +95,19 @@
 
                         <h5>Kết quả</h5>
                         <div id="resultsPanel"></div>
+                        <hr>
+                        <div class="fw-bold">
 
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">
+                                    Lưu lượng xe:
+                                </span>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" @click="toggleTrafficLayer" type="checkbox"
+                                        role="switch" id="flexSwitchCheckDefault">
+                                </div>
+                            </div> 
+                        </div>
                         <hr>
                         <div class="fw-bold">
 
@@ -109,11 +121,11 @@
                                 </div>
                             </div>
 
-                            <select class="form-select w-75" @change="updateTileLayer($event)"
+                            <!-- <select class="form-select w-75" @change="updateTileLayer($event)"
                                 title="Select weather overlay">
                                 <option value="microsoft.weather.radar.main">Radar</option>
                                 <option value="microsoft.weather.infrared.main" selected="selected">Infrared</option>
-                            </select>
+                            </select> -->
                             <br /><br />
                         </div>
 
@@ -166,6 +178,7 @@ import debounce from 'lodash/debounce';
 const router = useRouter()
 const show = ref(true)
 const switchBtn = ref(false)
+const switchBtnTraffic = ref(false)
 const lineLayer = ref(null)
 const addressStart = ref(null)
 const startPoint = ref(null)
@@ -182,7 +195,8 @@ const datasourceRoute = ref(null)
 
 const dataBus = ref([])
 
-const layer = ref(null);
+const layerWeather = ref(null);
+const layerTraffic = ref(null);
 const timer = ref(null);
 
 // const boundingBox = [
@@ -383,9 +397,9 @@ onMounted(async () => {
                 filter: ['==', ['get', 'traffic_road_coverage'], 'full']
             }, trafficBackgroundOptions))
         ], 'labels');
-
-        //Common style options for traffic flow dashed lines.
-        var trafficFLowLineOptions = {
+        // loadAniTraffic();
+         //Common style options for traffic flow dashed lines.
+         var trafficFLowLineOptions = {
             sourceLayer: 'Traffic flow',
             strokeColor: 'black',
 
@@ -435,9 +449,9 @@ onMounted(async () => {
         var fastFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
             filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'full'], ['>', ['get', 'traffic_level'], 0.8]]
         }, trafficFLowLineOptions));
-
+        layerTraffic.value=[oneSideSlowFlowLayer, slowFlowLayer, oneSideMidFlowLayer, midFlowLayer, oneSideFastFlowLayer, fastFlowLayer];
         //Add the layers below the labels to make the map clearer.
-        map.layers.add([oneSideSlowFlowLayer, slowFlowLayer, oneSideMidFlowLayer, midFlowLayer, oneSideFastFlowLayer, fastFlowLayer], 'labels');
+        map.layers.add(layerTraffic.value, 'labels');
 
         //Create a moving dashed line animation for each of the flow layers, but with different speedMultipliers.
         //Reverse the animation direction as it appears to ensure the correct flow directions for different side of the road for most countries (drive on the right side).
@@ -554,11 +568,89 @@ async function loadPollutionData() {
         }
     }
 }
+function loadAniTraffic(){
+        var datasource=map.sources[0];
+        //Common style options for traffic flow dashed lines.
+        var trafficFLowLineOptions = {
+            sourceLayer: 'Traffic flow',
+            strokeColor: 'black',
 
+            //Scale the width of roads based on the level of traffic.
+            strokeWidth: [
+                'interpolate',
+                ['exponential', 2],
+                ['zoom'],
+                12, 1,
+                17, 4
+            ]
+        };
+
+        //Create an offset for the layers that has two directional traffic data.
+        var offsetExp = [
+            'interpolate',
+            ['exponential', 2],
+            ['zoom'],
+            12, 3,
+            17, 7
+        ];
+
+        //Create line layers for the different levels of traffic flow.
+        var oneSideSlowFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
+            offset: offsetExp,
+            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'one_side'], ['>', ['get', 'traffic_level'], 0], ['<=', ['get', 'traffic_level'], 0.01]]
+        }, trafficFLowLineOptions));
+
+        var slowFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
+            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'full'], ['>', ['get', 'traffic_level'], 0], ['<=', ['get', 'traffic_level'], 0.01]]
+        }, trafficFLowLineOptions));
+
+        var oneSideMidFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
+            offset: offsetExp,
+            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'one_side'], ['>', ['get', 'traffic_level'], 0.01], ['<=', ['get', 'traffic_level'], 0.8]]
+        }, trafficFLowLineOptions));
+
+        var midFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
+            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'full'], ['>', ['get', 'traffic_level'], 0.01], ['<=', ['get', 'traffic_level'], 0.8]]
+        }, trafficFLowLineOptions));
+
+        var oneSideFastFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
+            offset: offsetExp,
+            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'one_side'], ['>', ['get', 'traffic_level'], 0.8]]
+        }, trafficFLowLineOptions));
+
+        var fastFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
+            filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'full'], ['>', ['get', 'traffic_level'], 0.8]]
+        }, trafficFLowLineOptions));
+        layerTraffic.value=[oneSideSlowFlowLayer, slowFlowLayer, oneSideMidFlowLayer, midFlowLayer, oneSideFastFlowLayer, fastFlowLayer];
+        //Add the layers below the labels to make the map clearer.
+        map.layers.add(layerTraffic.value, 'labels');
+
+        //Create a moving dashed line animation for each of the flow layers, but with different speedMultipliers.
+        //Reverse the animation direction as it appears to ensure the correct flow directions for different side of the road for most countries (drive on the right side).
+        var animationOptions = {
+            gapLength: 2,
+            dashLength: 2,
+            duration: 2000,
+            autoPlay: true,
+            loop: true,
+            reverse: true
+        };
+
+        if (atlas.animations) {
+            atlas.animations.flowingDashedLine(oneSideSlowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
+            atlas.animations.flowingDashedLine(slowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
+            atlas.animations.flowingDashedLine(oneSideMidFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
+            atlas.animations.flowingDashedLine(midFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
+            atlas.animations.flowingDashedLine(oneSideFastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
+            atlas.animations.flowingDashedLine(fastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
+        } else {
+            console.error('Atlas animations are not loaded.');
+        }
+}
 function loadWeatherLayer(tilesetId) {
     //If there is already a layer, stop it animating.
-    if (layer.value) {
-        layer.value.stop();
+    if (layerWeather.value) {
+        layerWeather.value.stop();
         clearInterval(timer);
     }
 
@@ -583,16 +675,16 @@ function loadWeatherLayer(tilesetId) {
         tlOptions.push(tileLayerOption);
     }
 
-    if (layer.value) {
-        layer.value.setOptions({
+    if (layerWeather.value) {
+        layerWeather.value.setOptions({
             tileLayerOptions: tlOptions,
             speedMultiplier: 0.5
         });
 
-        layer.value.play();
+        layerWeather.value.play();
     } else {
         //Create the animation manager.
-        layer.value = new atlas.layer.AnimatedTileLayer({
+        layerWeather.value = new atlas.layer.AnimatedTileLayer({
             tileLayerOptions: tlOptions,
             duration: numTimestamps * 800, //Allow one second for each frame (tile layer) in the animation.
             speedMultiplier: 0.5,
@@ -601,7 +693,7 @@ function loadWeatherLayer(tilesetId) {
         });
 
         //Add the layer to the map.
-        map.layers.add(layer.value, 'labels');
+        map.layers.add(layerWeather.value, 'labels');
 
         //Setup an interval timer to shift the layers (remove oldest, add newest) based on the update interval of the tile layer.
         timer.value = setInterval(intervalHandler(tilesetId), layerInfo.interval);
@@ -651,6 +743,27 @@ function updateTileLayer(event) {
     loadWeatherLayer(tilesetId);
 }
 
+function toggleTrafficLayer() {
+    // e.preventDefault();
+    switchBtnTraffic.value = !switchBtnTraffic.value
+
+    if (switchBtnTraffic.value) {
+        // loadWeatherLayer('microsoft.weather.infrared.main');
+        // loadAniTraffic();
+    } else {
+        if (layerTraffic.value) {
+            map.layers.remove(layerTraffic.value);
+            // layer.value = null; // Ensure layer is reset.
+        }
+        // // Stop the interval timer if necessary.
+        // if (timer.value) {
+        //     clearInterval(timer.value);
+        //     timer.value = null; // Ensure timer is reset.
+        // }
+    }
+
+}
+
 function toggleWeatherLayer() {
     // e.preventDefault();
     switchBtn.value = !switchBtn.value
@@ -658,9 +771,9 @@ function toggleWeatherLayer() {
     if (switchBtn.value) {
         loadWeatherLayer('microsoft.weather.infrared.main');
     } else {
-        if (layer.value) {
-            map.layers.remove(layer.value);
-            layer.value = null; // Ensure layer is reset.
+        if (layerWeather.value) {
+            map.layers.remove(layerWeather.value);
+            layerWeather.value = null; // Ensure layer is reset.
         }
         // Stop the interval timer if necessary.
         if (timer.value) {
@@ -807,7 +920,7 @@ async function calculateRoute() {
         datasourceRoute.value.add(data);
 
         // Create a table with the route travel time/distance information.
-        var html = ['<table class="table"><tr><td>Route</td><td>Distance</td><td>Time</td></tr>'];
+        var html = ['<table class="table"><tr><td>Route</td><td>Distance</td><td>Time</td><td>Cal. burned</td></tr>'];
 
         for (var i = 0; i < directions.routes.length; i++) {
             var s = directions.routes[i].summary.travelTimeInSeconds % 60;
@@ -820,7 +933,16 @@ async function calculateRoute() {
 
                 //Format time as min:sec. If seconds less than 10, prepend a 0 to the second value.
                 Math.round(directions.routes[i].summary.travelTimeInSeconds / 60), ':',
-                ((s < 10) ? '0' : ''), s, ' min</td></tr>');
+                ((s < 10) ? '0' : ''), s, ' min</td>','<td>',s*10,'</td>','</tr>',
+                '<tr><td></td>',
+                '<td>CO2</td><td>Noise exposure</td><td>Particle exposure</td></tr>',
+                '<tr><td></td>',
+                '<td>',s*10,'</td><td>',s/10,'dB</td><td>',s*0.5,'</td></tr>', 
+            );
+                //CO2 CH4 N20 emission
+                //Noise exposure
+                //Particle size
+                //Calory lost
         }
 
         map.events.add('click', lineLayer.value, function (e) {
