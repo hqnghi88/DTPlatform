@@ -880,7 +880,7 @@ async function calculateRoute() {
                 '<tr><td></td>',
                 '<td>CO2</td><td>Noise exposure</td><td>Particle exposure</td></tr>',
                 '<tr><td></td>',
-                '<td>', s * 10, '</td><td>', s / 10, 'dB</td><td>', s * 0.5, '</td></tr>',
+                '<td>', (s * 0.2).toFixed(2), '</td><td>', Math.min(140,(s*0.7).toFixed(2)), 'dB</td><td>', (s * 0.5).toFixed(2), '</td></tr>',
             );
             //CO2 CH4 N20 emission
             //Noise exposure
