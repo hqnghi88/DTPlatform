@@ -385,7 +385,7 @@ onMounted(async () => {
         // map.layers.add([
         //    ,
 
-            
+
         // ], 'labels');
 
         //Common style options for traffic flow dashed lines.
@@ -411,22 +411,22 @@ onMounted(async () => {
             12, 3,
             17, 7
         ];
-        var onesidebgLayer= new atlas.layer.LineLayer(datasource, null, Object.assign({
-                //For traffic data that represents one side of the road, offset it.
-                offset: [
-                    'interpolate',
-                    ['exponential', 2],
-                    ['zoom'],
-                    12, 2,
-                    17, 6
-                ],
+        var onesidebgLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
+            //For traffic data that represents one side of the road, offset it.
+            offset: [
+                'interpolate',
+                ['exponential', 2],
+                ['zoom'],
+                12, 2,
+                17, 6
+            ],
 
-                filter: ['==', ['get', 'traffic_road_coverage'], 'one_side']
-            }, trafficBackgroundOptions));
+            filter: ['==', ['get', 'traffic_road_coverage'], 'one_side']
+        }, trafficBackgroundOptions));
 
         var fullbgLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
-                filter: ['==', ['get', 'traffic_road_coverage'], 'full']
-            }, trafficBackgroundOptions));
+            filter: ['==', ['get', 'traffic_road_coverage'], 'full']
+        }, trafficBackgroundOptions));
         //Create line layers for the different levels of traffic flow.
         var oneSideSlowFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
             offset: offsetExp,
@@ -454,9 +454,33 @@ onMounted(async () => {
         var fastFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
             filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'full'], ['>', ['get', 'traffic_level'], 0.8]]
         }, trafficFLowLineOptions));
-        layerBgTraffic.value = [onesidebgLayer,fullbgLayer];
+        layerBgTraffic.value = [onesidebgLayer, fullbgLayer];
         layerTraffic.value = [oneSideSlowFlowLayer, slowFlowLayer, oneSideMidFlowLayer, midFlowLayer, oneSideFastFlowLayer, fastFlowLayer];
 
+        var animationOptions = {
+            gapLength: 2,
+            dashLength: 2,
+            duration: 2000,
+            autoPlay: true,
+            loop: true,
+            reverse: true
+        };
+        if (atlas.animations) {
+            var i = 0;
+            var spd = [0.25, 0.25, 1, 1, 4, 4];
+            for (const layer of layerTraffic.value) {
+                atlas.animations.flowingDashedLine(layer, Object.assign({ speedMultiplier: spd[i] }, animationOptions));
+                i++;
+            }
+            // atlas.animations.flowingDashedLine(oneSideSlowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
+            // atlas.animations.flowingDashedLine(slowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
+            // atlas.animations.flowingDashedLine(oneSideMidFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
+            // atlas.animations.flowingDashedLine(midFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
+            // atlas.animations.flowingDashedLine(oneSideFastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
+            // atlas.animations.flowingDashedLine(fastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
+        } else {
+            console.error('Atlas animations are not loaded.');
+        }
         // loadAniTraffic(); 
     });
 })
@@ -471,31 +495,7 @@ function loadAniTraffic() {
 
     //Create a moving dashed line animation for each of the flow layers, but with different speedMultipliers.
     //Reverse the animation direction as it appears to ensure the correct flow directions for different side of the road for most countries (drive on the right side).
-    var animationOptions = {
-        gapLength: 2,
-        dashLength: 2,
-        duration: 2000,
-        autoPlay: true,
-        loop: true,
-        reverse: true
-    };
 
-    if (atlas.animations) {
-        var i = 0;
-        var spd = [0.25, 0.25, 1, 1, 4, 4];
-        for (const layer of layerTraffic.value) {
-            atlas.animations.flowingDashedLine(layer, Object.assign({ speedMultiplier: spd[i] }, animationOptions));
-            i++;
-        }
-        // atlas.animations.flowingDashedLine(oneSideSlowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
-        // atlas.animations.flowingDashedLine(slowFlowLayer, Object.assign({ speedMultiplier: 0.25 }, animationOptions));
-        // atlas.animations.flowingDashedLine(oneSideMidFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
-        // atlas.animations.flowingDashedLine(midFlowLayer, Object.assign({ speedMultiplier: 1 }, animationOptions));
-        // atlas.animations.flowingDashedLine(oneSideFastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
-        // atlas.animations.flowingDashedLine(fastFlowLayer, Object.assign({ speedMultiplier: 4 }, animationOptions));
-    } else {
-        console.error('Atlas animations are not loaded.');
-    }
 }
 
 async function loadPollutionData() {
