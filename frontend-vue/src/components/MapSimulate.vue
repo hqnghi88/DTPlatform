@@ -189,7 +189,8 @@ const suggestionsEnd = ref([]);
 const displaySuggestStart = ref(false), displaySuggestEnd = ref(false)
 
 const trafficToken = import.meta.env.VITE_TRAFFIC_API_KEY
-const routeColors = ['blue', '#800080', '#FF1493', '#00FFFF', '#FF00FF', '#40E0D0'];
+const routeColors = ['#16C47F', '#FFD65A', '#FF9D23', '#F93827'];
+// const routeColors = ['blue', '#800080', '#FF1493', '#00FFFF', '#FF00FF', '#40E0D0'];
 var routeURL, map
 const datasourceRoute = ref(null)
 
@@ -197,6 +198,7 @@ const dataBus = ref([])
 
 const layerWeather = ref(null);
 const layerTraffic = ref(null);
+const layerBgTraffic = ref(null);
 const timer = ref(null);
 
 // const boundingBox = [
@@ -380,24 +382,11 @@ onMounted(async () => {
         };
 
         //Create two line layer for the base traffic flow color. One layer for both direction traffic data, and one layer for single line traffic data.
-        map.layers.add([
-            new atlas.layer.LineLayer(datasource, null, Object.assign({
-                //For traffic data that represents one side of the road, offset it.
-                offset: [
-                    'interpolate',
-                    ['exponential', 2],
-                    ['zoom'],
-                    12, 2,
-                    17, 6
-                ],
+        // map.layers.add([
+        //    ,
 
-                filter: ['==', ['get', 'traffic_road_coverage'], 'one_side']
-            }, trafficBackgroundOptions)),
-
-            new atlas.layer.LineLayer(datasource, null, Object.assign({
-                filter: ['==', ['get', 'traffic_road_coverage'], 'full']
-            }, trafficBackgroundOptions))
-        ], 'labels');
+            
+        // ], 'labels');
 
         //Common style options for traffic flow dashed lines.
         var trafficFLowLineOptions = {
@@ -422,7 +411,22 @@ onMounted(async () => {
             12, 3,
             17, 7
         ];
+        var onesidebgLayer= new atlas.layer.LineLayer(datasource, null, Object.assign({
+                //For traffic data that represents one side of the road, offset it.
+                offset: [
+                    'interpolate',
+                    ['exponential', 2],
+                    ['zoom'],
+                    12, 2,
+                    17, 6
+                ],
 
+                filter: ['==', ['get', 'traffic_road_coverage'], 'one_side']
+            }, trafficBackgroundOptions));
+
+        var fullbgLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
+                filter: ['==', ['get', 'traffic_road_coverage'], 'full']
+            }, trafficBackgroundOptions));
         //Create line layers for the different levels of traffic flow.
         var oneSideSlowFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
             offset: offsetExp,
@@ -450,6 +454,7 @@ onMounted(async () => {
         var fastFlowLayer = new atlas.layer.LineLayer(datasource, null, Object.assign({
             filter: ['all', ['==', ['get', 'traffic_road_coverage'], 'full'], ['>', ['get', 'traffic_level'], 0.8]]
         }, trafficFLowLineOptions));
+        layerBgTraffic.value = [onesidebgLayer,fullbgLayer];
         layerTraffic.value = [oneSideSlowFlowLayer, slowFlowLayer, oneSideMidFlowLayer, midFlowLayer, oneSideFastFlowLayer, fastFlowLayer];
 
         // loadAniTraffic(); 
@@ -461,6 +466,7 @@ function loadAniTraffic() {
     // console.log( map.sources);
     // layerTraffic.value=[oneSideSlowFlowLayer];
     //Add the layers below the labels to make the map clearer.
+    map.layers.add(layerBgTraffic.value, 'labels');
     map.layers.add(layerTraffic.value, 'labels');
 
     //Create a moving dashed line animation for each of the flow layers, but with different speedMultipliers.
@@ -689,6 +695,7 @@ function toggleTrafficLayer() {
     } else {
         if (layerTraffic.value) {
             map.layers.remove(layerTraffic.value);
+            map.layers.remove(layerBgTraffic.value);
             // layer.value = null; // Ensure layer is reset.
         }
         // // Stop the interval timer if necessary.
@@ -832,7 +839,7 @@ async function calculateRoute() {
 
     //Get the route options from the form.         
     var options = {
-        maxAlternatives: 5,
+        maxAlternatives: 4,
         minDeviationTime: 0,
         minDeviationDistance: 0,
         postBody: {
