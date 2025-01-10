@@ -189,7 +189,7 @@ const suggestionsEnd = ref([]);
 const displaySuggestStart = ref(false), displaySuggestEnd = ref(false)
 
 const trafficToken = import.meta.env.VITE_TRAFFIC_API_KEY
-const routeColors = ['#16C47F', '#FFD65A', '#FF9D23', '#F93827'];
+const routeColors = ['#16C47F', '#FFD65A', '#FF9D23', '#F93827', '#FF00FF', '#40E0D0'];
 // const routeColors = ['blue', '#800080', '#FF1493', '#00FFFF', '#FF00FF', '#40E0D0'];
 var routeURL, map
 const datasourceRoute = ref(null)
