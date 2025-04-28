@@ -175,6 +175,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router'
 import debounce from 'lodash/debounce';
 
+import * as turf from "@turf/turf";
 const router = useRouter()
 const show = ref(true)
 const switchBtn = ref(false)
@@ -193,8 +194,11 @@ const routeColors = ['#16C47F', '#FFD65A', '#FF9D23', '#F93827', '#FF00FF', '#40
 // const routeColors = ['blue', '#800080', '#FF1493', '#00FFFF', '#FF00FF', '#40E0D0'];
 var routeURL, map
 const datasourceRoute = ref(null)
+const datasourceIsoRoute = ref(null)
 
 const dataBus = ref([])
+
+var colors = ['LawnGreen', 'Yellow', 'Orange', 'Red'];
 
 const layerWeather = ref(null);
 const layerTraffic = ref(null);
@@ -322,10 +326,7 @@ onMounted(async () => {
     //Construct the RouteURL object
     routeURL = new atlas.service.RouteURL(pipeline);
 
-    // add pollution data
-    await loadPollutionData();
-
-    map.events.add('ready', function () {
+    map.events.add('ready', async function () {
 
         var datasource = new atlas.source.VectorTileSource(null, {
             tiles: ['https://{azMapsDomain}/traffic/flow/tile/pbf?api-version=1.0&style=relative&zoom={z}&x={x}&y={y}'],
@@ -337,7 +338,7 @@ onMounted(async () => {
         // for routing
         datasourceRoute.value = new atlas.source.DataSource();
         map.sources.add(datasourceRoute.value);
-
+                
         lineLayer.value = new atlas.layer.LineLayer(datasourceRoute.value, null, {
             // Get the route color using the resultIndex property of the route line. 
             strokeColor: ['to-color', ['at', ['get', 'resultIndex'], ['literal', routeColors]]],
@@ -355,6 +356,25 @@ onMounted(async () => {
             filter: ['any', ['==', ['geometry-type'], 'Point'], ['==', ['geometry-type'], 'MultiPoint']] //Only render Point or MultiPoints in this layer.
         }));
 
+        datasourceIsoRoute.value = new atlas.source.DataSource(); 
+        map.sources.add(datasourceIsoRoute.value);
+                           
+        map.layers.add([
+                     //Create a polygon layer to render the isochrones.
+                    new atlas.layer.PolygonLayer(datasourceIsoRoute.value, null, {
+                        fillColor: ['get', 'color']
+                    }),
+
+                    //Create a layer to outline the polygon areas.
+                    new atlas.layer.LineLayer(datasourceIsoRoute.value, null, {
+                        strokeColor: 'white'
+                    })
+                ], 'labels');
+
+    // add pollution data
+    await loadPollutionData();
+
+                
         // for traffic
         //Common style options for traffic background colors.
         var trafficBackgroundOptions = {
@@ -582,10 +602,81 @@ async function loadPollutionData() {
 
             let marker = new atlas.HtmlMarker(el)
             map.markers.add(marker);
+            calculateIsochrones(marker);
 
             map.events.add('click', marker, () => {
                 marker.togglePopup();
-            });
+            }); 
+        }
+    }
+}
+
+
+function calculateIsochrones(marker) {
+    // datasourceIsoRoute.value.clear(); 
+    var origin = marker.getOptions().position;
+
+    Promise.all([
+        routeURL.calculateRouteRange(atlas.service.Aborter.timeout(10000), origin, {
+            timeBudgetInSec: 2 * 60
+        }),
+        routeURL.calculateRouteRange(atlas.service.Aborter.timeout(10000), origin, {
+            timeBudgetInSec: 4 * 60
+        }),
+        routeURL.calculateRouteRange(atlas.service.Aborter.timeout(10000), origin, {
+            timeBudgetInSec: 6 * 60
+        }),
+        routeURL.calculateRouteRange(atlas.service.Aborter.timeout(10000), origin, {
+            timeBudgetInSec: 8 * 60
+        })
+    ]).then(values => {
+        //The values are order from shortest time to longest time, based on how we passed in the queries.
+        //Loop through each polygon isochrone and cut out the difference from the previous icochrone. Since the time increases with each isochrone, it should cover all area of the previous isochrone.
+
+        //The first isochrone is unchanged.
+        var prev = values[0].geojson.getFeatures().features[0];
+        prev.properties.color = colors[0];
+
+        //Ensure polygon rings are closed.
+        closePolygonRings(prev);
+
+        var polygons = [prev];
+
+        for (var i = 1; i < values.length; i++) {
+            var f = values[i].geojson.getFeatures().features[0];
+
+            //Ensure polygon rings are closed.
+            closePolygonRings(f);
+
+            //Subtract the previous isochrone from the current one.
+            if(f.length < 2) continue
+            // console.log(f);
+            var difference = turf.difference(f, prev);
+            difference.properties.color = colors[i];
+            polygons.push(difference);
+
+            prev = f;
+        }
+
+        if (polygons.length > 0) {
+            //Add the polygons to the data source.
+            datasourceIsoRoute.value.add(polygons);
+
+            //Update the map camera to display the largest isochrone area.
+            // map.setCamera({
+            //     bounds: atlas.data.BoundingBox.fromData(polygons[polygons.length - 1])
+            // });
+        }
+    });
+}
+
+function closePolygonRings(polygon) {
+    //Ensure the first and last coordinate of each polygon ring are identical to form a closed polygon ring.
+    for (var i = 0; i < polygon.geometry.coordinates.length; i++) {
+        var ring = polygon.geometry.coordinates[i];
+
+        if (!atlas.data.Position.areEqual(ring[0], ring[ring.length - 1])) {
+            ring.push(ring[0]);
         }
     }
 }
@@ -880,7 +971,7 @@ async function calculateRoute() {
                 '<tr><td></td>',
                 '<td>CO2</td><td>Noise exposure</td><td>Particle exposure</td></tr>',
                 '<tr><td></td>',
-                '<td>', (s * 0.2).toFixed(2), '</td><td>', Math.min(140,(s*0.7).toFixed(2)), 'dB</td><td>', (s * 0.5).toFixed(2), '</td></tr>',
+                '<td>', (s * 0.2).toFixed(2), '</td><td>', Math.min(140, (s * 0.7).toFixed(2)), 'dB</td><td>', (s * 0.5).toFixed(2), '</td></tr>',
             );
             //CO2 CH4 N20 emission
             //Noise exposure

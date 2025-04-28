@@ -16,7 +16,7 @@
     "@fortawesome/free-regular-svg-icons": "^6.5.2",
     "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@fortawesome/vue-fontawesome": "^3.0.8",
-    "@turf/turf": "^7.0.0",
+    "@turf/turf": "^6.0.0",
     "axios": "^1.7.2",
     "azure-maps-animations": "^0.0.1",
     "azure-maps-control": "^3.3.0",
